@@ -1,3 +1,6 @@
+# Ignore build folder
+build/
+
 # Prerequisites
 *.d
 
@@ -50,3 +53,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Tags
+tags
