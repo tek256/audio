@@ -879,8 +879,7 @@ void a_ctx_update(a_ctx* ctx) {
     ALenum state;
     alGetSourcei(sfx->source, AL_SOURCE_STATE, &state);
 
-    int8_t remove =
-        (state != AL_PLAYING && sfx->req->time > 0.f) || sfx->req->stop;
+    int8_t remove = (state != AL_PLAYING) || sfx->req->stop;
 
     if (remove) {
       for (uint16_t j = 0; j < ctx->layer_capacity; ++j) {
@@ -970,7 +969,20 @@ uint16_t a_sfx_play(a_ctx* ctx, uint16_t layer, uint16_t buf_id, a_req* req) {
     alGenSources(1, &slot->source);
   }
 
-  alSourcei(slot->source, AL_BUFFER, buf->buf);
+  if (req->loop_count > 0) {
+    // Queue buffer to play x times
+    for (uint8_t i = 0; i < req->loop_count; ++i) {
+      alSourceQueueBuffers(slot->source, 1, &buf->id);
+    }
+  } else if (req->loop) {
+    alSourcei(slot->source, AL_LOOPING, req->loop);
+  } else {
+    alSourcei(slot->source, AL_LOOPING, AL_FALSE);
+  }
+
+  if (req->loop_count == 0) {
+    alSourcei(slot->source, AL_BUFFER, buf->buf);
+  }
 
 #if !defined(ASTERA_AL_NO_FX)
   // Apply fx
@@ -1007,7 +1019,6 @@ uint16_t a_sfx_play(a_ctx* ctx, uint16_t layer, uint16_t buf_id, a_req* req) {
              req->position[2]);
   alSource3f(slot->source, AL_VELOCITY, req->velocity[0], req->velocity[1],
              req->velocity[2]);
-  alSourcei(slot->source, AL_LOOPING, req->loop);
 
   alSourcePlay(slot->source);
 

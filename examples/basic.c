@@ -19,18 +19,18 @@ int main(int argc, char** argv) {
   position[2] = 0.0f;
 
   // Create a request to manage how we want to play a sound
-  a_req req = a_req_create(position, 1.0f, 1.0f, 1, 0, 0, 0, 0);
+  a_req req      = a_req_create(position, 1.0f, 1.0f, 0, 0, 0, 0, 0);
+  req.loop_count = 4;
 
   // Play the sound effect
   uint16_t sfx_id = a_sfx_play(ctx, layer_id, buffer_id, &req);
 
   // Let the sound effect loop 4 times
-  while (1 && sfx_id != 0) {
+  while (1) {
     // Update the audio context
     a_ctx_update(ctx);
 
-    if (req.loop_count > 3) {
-      a_sfx_stop(ctx, sfx_id);
+    if (req.state == AL_STOPPED) {
       break;
     }
   }
