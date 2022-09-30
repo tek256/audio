@@ -1,5 +1,5 @@
-#ifndef ASTERA_AUDIO_HEADER
-#define ASTERA_AUDIO_HEADER
+#ifndef AUDIO_AUDIO_HEADER
+#define AUDIO_AUDIO_HEADER
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,6 +16,12 @@ typedef double time_s;
 typedef float a_vec2[2];
 typedef float a_vec3[3];
 
+static void a_vec3_set(a_vec3 dst, float x, float y, float z) {
+  dst[0] = x;
+  dst[1] = y;
+  dst[2] = z;
+}
+
 /* NOTE: These are relative includes for portability's sake
  *       the cmake find_package exports them as relative so it'll work
  *       cross platform as expected */
@@ -30,12 +36,12 @@ typedef float a_vec3[3];
 #define STB_VORBIS_HEADER_ONLY
 #include <stb_vorbis.c>
 
-#if !defined(ASTERA_SONG_MAX_FAILS)
-#define ASTERA_SONG_MAX_FAILS 3
+#if !defined(AUDIO_SONG_MAX_FAILS)
+#define AUDIO_SONG_MAX_FAILS 3
 #endif
 
-#if !defined(ASTERA_DEFAUT_SFX_RANGE)
-#define ASTERA_DEFAUT_SFX_RANGE 20
+#if !defined(AUDIO_DEFAUT_SFX_RANGE)
+#define AUDIO_DEFAUT_SFX_RANGE 20
 #endif
 
 typedef struct {
@@ -59,40 +65,40 @@ typedef enum {
 } a_fx_type;
 
 typedef struct {
-  float  density;               // [0.0, 1.0],   default 1.0
-  float  diffusion;             // [0.0, 1.0],   default 1.0
-  float  gain;                  // [0.0, 1.0],   default 0.32
-  float  gainhf;                // [0.0, 1.0],   default 0.89
-  float  decay;                 // [0.1, 20.0],  default 1.49
-  float  decay_hfratio;         // [0.1, 2.0],   default 0.83
-  float  refl_gain;             // [0.0, 3.16],  default 0.05
-  float  refl_delay;            // [0.0, 0.3],   default 0.007
-  float  late_gain;             // [0.0, 10.0],  default 1.26
-  float  late_delay;            // [0.0, 0.1],   default 0.011
-  float  air_absorption_gainhf; // [0.892, 1.0], default 0.994
-  float  room_rolloff_factor;   // [0.0, 10.0],  default: 0.0
-  int8_t decay_hflimit;         // [0, 1],       default 1
+  float  density;               /* [0.0, 1.0],   default 1.0 */
+  float  diffusion;             /* [0.0, 1.0],   default 1.0 */
+  float  gain;                  /* [0.0, 1.0],   default 0.32 */
+  float  gainhf;                /* [0.0, 1.0],   default 0.89 */
+  float  decay;                 /* [0.1, 20.0],  default 1.49 */
+  float  decay_hfratio;         /* [0.1, 2.0],   default 0.83 */
+  float  refl_gain;             /* [0.0, 3.16],  default 0.05 */
+  float  refl_delay;            /* [0.0, 0.3],   default 0.007 */
+  float  late_gain;             /* [0.0, 10.0],  default 1.26 */
+  float  late_delay;            /* [0.0, 0.1],   default 0.011 */
+  float  air_absorption_gainhf; /* [0.892, 1.0], default 0.994 */
+  float  room_rolloff_factor;   /* [0.0, 10.0],  default: 0.0 */
+  int8_t decay_hflimit;         /* [0, 1],       default 1 */
 } a_fx_reverb;
 
 typedef struct {
-  float low_gain;    // default: 1        [0.126, 7.943]
-  float low_cutoff;  // hz, default: 200  [50.0, 800.0]
-  float mid1_gain;   // default: 1        [0.126, 7.943]
-  float mid1_center; // hz, default: 500  [200.0, 3000.0]
-  float mid1_width;  // default: 1        [0.01, 1.0]
-  float mid2_gain;   // default: 1        [0.126, 7.943]
-  float mid2_center; // hz, default: 3000 [1000.0, 8000.0]
-  float mid2_width;  // default: 1        [0.01, 1.0]
-  float high_gain;   // default 1.0       [0.126, 7.943]
-  float high_cutoff; // hz, default: 6000 [4000.0 - 16000.0]
+  float low_gain;    /* default: 1        [0.126, 7.943] */
+  float low_cutoff;  /* hz, default: 200  [50.0, 800.0] */
+  float mid1_gain;   /* default: 1        [0.126, 7.943] */
+  float mid1_center; /* hz, default: 500  [200.0, 3000.0] */
+  float mid1_width;  /* default: 1        [0.01, 1.0] */
+  float mid2_gain;   /* default: 1        [0.126, 7.943] */
+  float mid2_center; /* hz, default: 3000 [1000.0, 8000.0] */
+  float mid2_width;  /* default: 1        [0.01, 1.0] */
+  float high_gain;   /* default 1.0       [0.126, 7.943] */
+  float high_cutoff; /* hz, default: 6000 [4000.0 - 16000.0] */
 } a_fx_eq;
 
 typedef struct {
   uint16_t id;
 
-  // AL effect ID
+  /* AL effect ID */
   uint32_t effect_id;
-  // AL auxiliary effect slot ID
+  /* AL auxiliary effect slot ID */
   uint32_t slot_id;
 
   float gain;
@@ -237,7 +243,7 @@ typedef struct {
   float gain;
 } a_layer;
 
-// See audio.c for a_ctx definition
+/* See audio.c for a_ctx definition */
 typedef struct a_ctx a_ctx;
 
 /* Print various info about the OpenAL EFX Extension capabilities on this
@@ -309,6 +315,17 @@ uint8_t a_sfx_resume(a_ctx* ctx, uint16_t sfx_id);
 uint16_t a_song_create(a_ctx* ctx, unsigned char* data, uint32_t data_length,
                        const char* name, uint16_t packets_per_buffer,
                        uint8_t buffers, uint32_t max_buffer_size);
+
+/* Create a song from filesystem
+ * ctx - the context to create the song within
+ * file_path - the filepath to get the song data from
+ * packets_per_buffer - the amount of packets to put into a buffer
+ * buffers - the number of OpenAL buffers to use
+ * data_ptr - a pointer to hold buffer created from getting file from disk
+ * returns: the song ID (non-zero = success, 0 = fail) */
+uint16_t a_song_create_fs(a_ctx* ctx, const char* file_path, const char* name,
+                          uint16_t packets_per_buffer, uint8_t buffers,
+                          uint32_t max_buffer_size, unsigned char** data_ptr);
 
 /* Destroy a song & its contents
  * ctx - the context the song is contained within

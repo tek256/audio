@@ -15,7 +15,7 @@ include(CMakeDependentOption)
 include(GenerateExportHeader)
 include(FetchContent)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/dep/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMake")
 
 # Use OpenAL-Soft's binaries for Windows
 if (WIN32)
@@ -61,31 +61,31 @@ if(APPLE AND NOT OpenALSoft_FOUND)
 endif()
 
 # If to build the `examples/` folder
-cmake_dependent_option(ASTERA_BUILD_EXAMPLES 
-  "Build astera's examples" ON
+cmake_dependent_option(AUDIO_BUILD_EXAMPLES 
+  "Build AUDIO's examples" ON
   "CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME" ON)
 
 # Build out the utility tools
-cmake_dependent_option(ASTERA_BUILD_TOOLS 
-  "Build astera's tools" ON
+cmake_dependent_option(AUDIO_BUILD_TOOLS
+  "Build AUDIO's tools" ON
   "CMAKE_BUILD_TYPE STREQUAL Debug" ON)
 
-# Enables output using the ASTERA_DBG macro
-cmake_dependent_option(ASTERA_DEBUG_OUTPUT
-  "Enable Astera's internal debug output" ON 
+# Enables output using the AUDIO_DBG macro
+cmake_dependent_option(AUDIO_DEBUG_OUTPUT
+  "Enable AUDIO's internal debug output" ON 
   "CMAKE_BUILD_TYPE STREQUAL Debug" ON)
 
 # Enable the inclusion of pak writing in the library
-cmake_dependent_option(ASTERA_PAK_WRITE
+cmake_dependent_option(AUDIO_PAK_WRITE
   "Include pak writing functions in asset.c/h" ON
   "CMAKE_BUILD_TYPE STREQUAL Debug;CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME" ON)
 
 # Enables ASAN & Pedantic output
-option(ASTERA_DEBUG_ENGINE OFF)
+option(AUDIO_DEBUG_ENGINE OFF)
 
 # Disable OpenAL Audio Effects from being compiled in
 # NOTE: Mac OSX OpenAL Effects are currently disabled by default
-option(ASTERA_DISABLE_AUDIO_FX OFF)
+option(AUDIO_DISABLE_AUDIO_FX OFF)
 
 # Get all of our source files into a list
 file(GLOB sources CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/src/*.c)
@@ -107,15 +107,15 @@ target_include_directories(${PROJECT_NAME}
 # Add all the preprocessor definitions for headers
 target_compile_definitions(${PROJECT_NAME}
   PRIVATE
-    $<$<BOOL:${ASTERA_DEBUG_ENGINE}>:ASTERA_DEBUG_OUTPUT>
-    $<$<BOOL:${ASTERA_DEBUG_OUTPUT}>:ASTERA_DEBUG_OUTPUT>
+    $<$<BOOL:${AUDIO_DEBUG_ENGINE}>:AUDIO_DEBUG_OUTPUT>
+    $<$<BOOL:${AUDIO_DEBUG_OUTPUT}>:AUDIO_DEBUG_OUTPUT>
     $<$<PLATFORM_ID:FreeBSD>:FreeBSD>
     $<$<PLATFORM_ID:OpenBSD>:OpenBSD>
     $<$<PLATFORM_ID:NetBSD>:NetBSD>
     $<$<PLATFORM_ID:Darwin>:OSX>
   PUBLIC
-    $<$<BOOL:${ASTERA_DISABLE_AUDIO_FX}>:ASTERA_AL_NO_FX>
-    $<$<BOOL:${ASTERA_PAK_WRITE}>:ASTERA_PAK_WRITE>)
+    $<$<BOOL:${AUDIO_DISABLE_AUDIO_FX}>:AUDIO_AL_NO_FX>
+    $<$<BOOL:${AUDIO_PAK_WRITE}>:AUDIO_PAK_WRITE>)
 
 # Set the C Standard to C99
 target_compile_features(${PROJECT_NAME} PRIVATE c_std_99)
@@ -127,7 +127,7 @@ target_compile_options(${PROJECT_NAME}
   $<$<C_COMPILER_ID:MSVC>:/W4>)
 
 # Enables ASAN & Pedantics
-if(ASTERA_DEBUG_ENGINE)
+if(AUDIO_DEBUG_ENGINE)
   target_compile_options(${PROJECT_NAME}
     PUBLIC
     $<$<C_COMPILER_ID:MSVC>:/fsanitize=address>
@@ -154,21 +154,21 @@ install(DIRECTORY include/ "${PROJECT_BINARY_DIR}/include/"
   TYPE INCLUDE
   FILES_MATCHING PATTERN "*.h")
 
-if(ASTERA_BUILD_EXAMPLES)
+if(AUDIO_BUILD_EXAMPLES)
   if(EXISTS "${PROJECT_SOURCE_DIR}/examples")
     add_subdirectory("${PROJECT_SOURCE_DIR}/examples")
   else()
-    message(WARNING "Unable to find examples directory, disabling ASTERA_BUILD_EXAMPLES")
-    set(ASTERA_BUILD_EXAMPLES OFF)
+    message(WARNING "Unable to find examples directory, disabling AUDIO_BUILD_EXAMPLES")
+    set(AUDIO_BUILD_EXAMPLES OFF)
   endif()
 endif()
 
-if(ASTERA_BUILD_TOOLS)
+if(AUDIO_BUILD_TOOLS)
   if(EXISTS "${PROJECT_SOURCE_DIR}/tools")
     add_subdirectory("${PROJECT_SOURCE_DIR}/tools")
   else()
-    message(WARNING "Unable to find tools directory, disabling ASTERA_BUILD_TOOLS")
-    set(ASTERA_BUILD_TOOLS OFF)
+    message(WARNING "Unable to find tools directory, disabling AUDIO_BUILD_TOOLS")
+    set(AUDIO_BUILD_TOOLS OFF)
   endif()
 endif()
 

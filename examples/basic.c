@@ -14,9 +14,7 @@ int main(int argc, char** argv) {
 
   // The position of the sound effect in 3D Space (not important for now)
   a_vec3 position;
-  position[0] = 0.0f;
-  position[1] = 0.0f;
-  position[2] = 0.0f;
+  a_vec3_set(position, 0.0f, 0.0f, 0.0f);
 
   // Create a request to manage how we want to play a sound
   a_req req      = a_req_create(position, 1.0f, 1.0f, 0, 0, 0, 0, 0);

@@ -1,17 +1,17 @@
 #include <audio/audio.h>
 
 #if defined(__APPLE__)
-#if !defined(ASTERA_AL_NO_FX)
-#define ASTERA_AL_NO_FX
+#if !defined(AUDIO_AL_NO_FX)
+#define AUDIO_AL_NO_FX
 #endif
 #endif
 
-#if !defined(ASTERA_AL_DISTANCE_MODEL)
-#define ASTERA_AL_DISTANCE_MODEL AL_INVERSE_DISTANCE
+#if !defined(AUDIO_AL_DISTANCE_MODEL)
+#define AUDIO_AL_DISTANCE_MODEL AL_INVERSE_DISTANCE
 #endif
 
-#if !defined(ASTERA_AL_ROLLOFF_FACTOR)
-#define ASTERA_AL_ROLLOFF_FACTOR 1.f
+#if !defined(AUDIO_AL_ROLLOFF_FACTOR)
+#define AUDIO_AL_ROLLOFF_FACTOR 1.f
 #endif
 
 #undef STB_VORBIS_HEADER_ONLY
@@ -29,73 +29,73 @@
 #endif
 
 struct a_ctx {
-  // context - the OpenAL-Soft Context
-  // device - the device OpenAL-Soft is using
+  /* context - the OpenAL-Soft Context
+     device - the device OpenAL-Soft is using */
   ALCcontext* context;
   ALCdevice*  device;
 
-  // listener - the listener values for OpenAL
+  /* listener - the listener values for OpenAL */
   a_listener listener;
 
-  // songs - the list of songs
-  // song_names - a list of song names
-  // song_count - the current amount of songs
-  // song_capacity - the max amount of songs
-  // song_high - the high water mark for songs in the song list
+  /* songs - the list of songs
+   * song_names - a list of song names
+   * song_count - the current amount of songs
+   * song_capacity - the max amount of songs
+   * song_high - the high water mark for songs in the song list */
   a_song*      songs;
   const char** song_names;
   uint16_t     song_count, song_capacity, song_high;
 
-  // sfx - the list of sound effects (sounds)
-  // sfx_count - the current amount of sfx
-  // sfx_capacity - the max amount of sfx
+  /* sfx - the list of sound effects (sounds)
+   * sfx_count - the current amount of sfx
+   * sfx_capacity - the max amount of sfx */
   a_sfx*   sfx;
   uint16_t sfx_count, sfx_capacity;
 
-  // buffers - the list of audio buffers (sounds / raw data)
-  // buffer_names - a list of names for audio buffers in the list
-  // buffer_count - the current amount of buffers in the list
-  // buffer_capacity - the max amount of buffers
-  // buffer_high - the high water mark for buffers in the the list
+  /* buffers - the list of audio buffers (sounds / raw data)
+   * buffer_names - a list of names for audio buffers in the list
+   * buffer_count - the current amount of buffers in the list
+   * buffer_capacity - the max amount of buffers
+   * buffer_high - the high water mark for buffers in the the list */
   a_buf*       buffers;
   const char** buffer_names;
   uint16_t     buffer_count, buffer_capacity, buffer_high;
 
-  // fx_slots - a list of slots for OpenAL Effects
-  // fx_count - the amount of effects currently in the list
-  // fx_capacity - the max amount of effects
-  // fx_high - the high water mark for the effects in the list
+  /* fx_slots - a list of slots for OpenAL Effects
+   * fx_count - the amount of effects currently in the list
+   * fx_capacity - the max amount of effects
+   * fx_high - the high water mark for the effects in the list */
   a_fx*    fx_slots;
   uint16_t fx_count, fx_capacity;
 
   a_filter* filter_slots;
   uint16_t  filter_count, filter_capacity;
 
-  // fx_per_source - the OpenAL Defined max FX per source
-  // max_fx - the OpenAL defined max FX
+  /* fx_per_source - the OpenAL Defined max FX per source
+   * max_fx - the OpenAL defined max FX */
   uint16_t fx_per_source, max_fx;
 
-  uint8_t resizable; // allow for dynamic resizing of arrays
-  uint8_t allow;     // allow playback
-  uint8_t use_fx;    // allow effect usage
+  uint8_t resizable; /* allow for dynamic resizing of arrays */
+  uint8_t allow;     /* allow playback */
+  uint8_t use_fx;    /* allow effect usage */
 
-  // pcm - a buffer for decoding
-  // pcm_length - the number of shorts the pcm can hold
-  // pcm_index - the index of the last element in the pcm
+  /* pcm - a buffer for decoding
+   * pcm_length - the number of shorts the pcm can hold
+   * pcm_index - the index of the last element in the pcm */
   uint16_t* pcm;
   uint32_t  pcm_length, pcm_index;
 
-  // layers - array of layers used to manage playback
-  // layer_count - the number of layers in the array currently
-  // layer_capacity - the max number of layers in array
+  /* layers - array of layers used to manage playback
+   * layer_count - the number of layers in the array currently
+   * layer_capacity - the max number of layers in array */
   a_layer* layers;
   uint16_t layer_count, layer_capacity;
 
-  // error - the last error value set
+  /* error - the last error value set */
   int32_t error;
 };
 
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
 #include <efx.h>
 
 static LPALGENEFFECTS    alGenEffects;
@@ -183,14 +183,14 @@ static a_layer* _a_get_layer(a_ctx* ctx, uint16_t layer_id) {
 
 static uint8_t _a_layer_add(a_layer* layer, uint32_t id, uint8_t is_sfx) {
   if (is_sfx) {
-    if (layer->sfx_count == layer->sfx_capacity - 1) {
+    if (layer->sfx_count == layer->sfx_capacity) {
       AUDIO_FUNC_DBG("no free sfx slots in layer\n");
       return 0;
     }
 
     for (uint16_t i = 0; i < layer->sfx_capacity; ++i) {
       if (layer->sfx[i] == id) {
-        AUDIO_FUNC_DBG("sfx id already in layer\n");
+        AUDIO_FUNC_DBG("sfx id [%i] already in layer\n", id);
         return 0;
       }
 
@@ -201,7 +201,7 @@ static uint8_t _a_layer_add(a_layer* layer, uint32_t id, uint8_t is_sfx) {
       }
     }
   } else {
-    if (layer->song_count == layer->song_capacity - 1) {
+    if (layer->song_count == layer->song_capacity) {
       AUDIO_FUNC_DBG("no free song slots in layer\n");
       return 0;
     }
@@ -245,7 +245,7 @@ static uint8_t _a_layer_remove(a_layer* layer, uint32_t id, uint8_t is_sfx) {
     }
 
     if (start) {
-      layer->sfx[layer->sfx_count] = 0;
+      layer->sfx[layer->sfx_count - 1] = 0;
       --layer->sfx_count;
       return 1;
     }
@@ -273,7 +273,7 @@ static uint8_t _a_layer_remove(a_layer* layer, uint32_t id, uint8_t is_sfx) {
   return 0;
 }
 
-// Get the gain of the containing layer for a resource
+/* Get the gain of the containing layer for a resource */
 static float _a_get_layered_gain(a_ctx* ctx, uint32_t id, uint8_t is_sfx) {
   for (uint16_t i = 0; i < ctx->layer_capacity; ++i) {
     a_layer* layer = &ctx->layers[i];
@@ -349,9 +349,9 @@ static uint8_t _a_song_reset(a_ctx* ctx, a_song* song) {
 
   stb_vorbis_seek_start(song->vorbis);
 
-  // uint32_t error = stb_vorbis_get_error(song->vorbis);
+  /* uint32_t error = stb_vorbis_get_error(song->vorbis); */
 
-  // Unqueue anything existing
+  /* Unqueue anything existing */
   alSourceStop(song->source);
   alSourceUnqueueBuffers(song->source, song->buffer_count, song->buffers);
 
@@ -409,7 +409,7 @@ void a_efx_info(a_ctx* ctx) {
   }
 
   uint32_t s_sends = 0;
-#if !defined(ASTERA_AL_NO_FX) && defined(ALC_MAX_AUXILIARY_SENDS)
+#if !defined(AUDIO_AL_NO_FX) && defined(ALC_MAX_AUXILIARY_SENDS)
   s_sends = ALC_MAX_AUXILIARY_SENDS;
 #endif
   AUDIO_FUNC_DBG("MAX_AUXILIARY_SENDS: %i\n", s_sends);
@@ -447,14 +447,14 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
 
   ALCdevice* al_device = alcOpenDevice(device);
 
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (alcIsExtensionPresent(al_device, "ALC_EXT_EFX") == AL_FALSE) {
     ctx->use_fx = 0;
   } else {
     ctx->use_fx = 1;
   }
 
-  // Disable effects if we're not using any of them
+  /* Disable effects if we're not using any of them */
   if (!max_fx && !max_filters) {
     ctx->use_fx = 0;
   }
@@ -464,7 +464,7 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
 
   int attribs[4] = {0};
 
-#if !defined(ASTERA_AL_NO_FX) && defined(ALC_MAX_AUXILIARY_SENDS)
+#if !defined(AUDIO_AL_NO_FX) && defined(ALC_MAX_AUXILIARY_SENDS)
   if (ctx->use_fx) {
     attribs[0] = ALC_MAX_AUXILIARY_SENDS;
     attribs[1] = 4;
@@ -482,11 +482,11 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
   ctx->context = context;
   ctx->device  = al_device;
 
-#if defined(ASTERA_AL_DISTANCE_MODEL)
-  alDistanceModel(ASTERA_AL_DISTANCE_MODEL);
+#if defined(AUDIO_AL_DISTANCE_MODEL)
+  alDistanceModel(AUDIO_AL_DISTANCE_MODEL);
 #endif
 
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (ctx->use_fx) {
     ALint fx_per_source;
     alcGetIntegerv(al_device, ALC_MAX_AUXILIARY_SENDS, 1, &fx_per_source);
@@ -589,7 +589,7 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
     ctx->pcm = (uint16_t*)calloc(pcm_size, sizeof(uint16_t));
   }
 
-  // Create the resource arrays
+  /* Create the resource arrays */
   ctx->song_capacity = max_songs;
   ctx->song_count    = 0;
   ctx->song_high     = 0;
@@ -656,18 +656,22 @@ uint8_t a_ctx_destroy(a_ctx* ctx) {
     for (uint16_t i = 0; i < ctx->song_capacity; ++i) {
       a_song* song = &ctx->songs[i];
 
-      // Cleanup OpenAL Resources
-      alDeleteBuffers(song->buffer_count, song->buffers);
-      alDeleteSources(1, &song->source);
+      if (song->id) {
+        if (song->buffers) {
+          /* Cleanup OpenAL Resources*/
+          alDeleteBuffers(song->buffer_count, song->buffers);
+          free(song->buffers);
+        }
 
-      if (song->vorbis)
-        stb_vorbis_close(song->vorbis);
+        if (song->buffer_sizes)
+          free(song->buffer_sizes);
 
-      if (song->buffers)
-        free(song->buffers);
+        if (song->source)
+          alDeleteSources(1, &song->source);
 
-      if (song->buffer_sizes)
-        free(song->buffer_sizes);
+        if (song->vorbis)
+          stb_vorbis_close(song->vorbis);
+      }
     }
     free(ctx->songs);
   }
@@ -924,7 +928,7 @@ void a_ctx_update(a_ctx* ctx) {
 }
 
 uint16_t a_sfx_play(a_ctx* ctx, uint16_t layer, uint16_t buf_id, a_req* req) {
-  if (ctx->sfx_count == ctx->sfx_capacity - 1) {
+  if (ctx->sfx_count == ctx->sfx_capacity) {
     AUDIO_FUNC_DBG("no free sfx slots.\n");
     return 0;
   }
@@ -933,7 +937,7 @@ uint16_t a_sfx_play(a_ctx* ctx, uint16_t layer, uint16_t buf_id, a_req* req) {
   if (layer) {
     a_layer* _layer = _a_get_layer(ctx, layer);
     gain *= _layer->gain;
-    if (_layer->sfx_count == _layer->sfx_capacity - 1) {
+    if (_layer->sfx_count == _layer->sfx_capacity) {
       AUDIO_FUNC_DBG("no free slots in layer\n");
       return 0;
     }
@@ -947,16 +951,18 @@ uint16_t a_sfx_play(a_ctx* ctx, uint16_t layer, uint16_t buf_id, a_req* req) {
 
   a_sfx* slot = 0;
   for (uint16_t i = 0; i < ctx->sfx_capacity; ++i) {
-    if (ctx->sfx[i].source) {
-      uint32_t buffer_id;
-      alGetSourcei(ctx->sfx[i].source, AL_BUFFER, &buffer_id);
-      if (buffer_id == 0) {
-        slot = &ctx->sfx[i];
+    a_sfx*   cursor    = &ctx->sfx[i];
+    uint32_t buffer_id = 0;
+    alGetSourcei(cursor->source, AL_BUFFER, &buffer_id);
+    if (buffer_id == 0) {
+      /* We want to make sure that we don't have anything queued to play on the
+         slot */
+      uint32_t queue_count = 0;
+      alGetSourcei(cursor->source, AL_BUFFERS_QUEUED, &queue_count);
+      if (queue_count == 0) {
+        slot = cursor;
         break;
       }
-    } else {
-      slot = &ctx->sfx[i];
-      break;
     }
   }
 
@@ -970,7 +976,7 @@ uint16_t a_sfx_play(a_ctx* ctx, uint16_t layer, uint16_t buf_id, a_req* req) {
   }
 
   if (req->loop_count > 0) {
-    // Queue buffer to play x times
+    /* Queue buffer to play x times */
     for (uint8_t i = 0; i < req->loop_count; ++i) {
       alSourceQueueBuffers(slot->source, 1, &buf->id);
     }
@@ -984,11 +990,11 @@ uint16_t a_sfx_play(a_ctx* ctx, uint16_t layer, uint16_t buf_id, a_req* req) {
     alSourcei(slot->source, AL_BUFFER, buf->buf);
   }
 
-#if !defined(ASTERA_AL_NO_FX)
-  // Apply fx
+#if !defined(AUDIO_AL_NO_FX)
+  /* Apply fx */
   if (req->fx_count > 0) {
     for (uint16_t i = 0; i < req->fx_count; ++i) {
-      // Make sure it's valid within the range of filters
+      /* Make sure it's valid within the range of filters */
       if (req->fx[i] <= ctx->fx_capacity && req->fx[i] > 0) {
         alSource3i(slot->source, AL_AUXILIARY_SEND_FILTER,
                    (ALint)ctx->fx_slots[req->fx[i] - 1].slot_id, i, 0);
@@ -996,7 +1002,7 @@ uint16_t a_sfx_play(a_ctx* ctx, uint16_t layer, uint16_t buf_id, a_req* req) {
     }
   }
 
-  // Apply filters
+  /* Apply filters */
   if (req->filter_count > 0) {
     for (uint16_t i = 0; i < req->filter_count; ++i) {
       if (req->filters[i] <= ctx->filter_capacity && req->filters[i] > 0) {
@@ -1175,7 +1181,7 @@ uint16_t a_song_create(a_ctx* ctx, unsigned char* data, uint32_t data_length,
   for (uint8_t i = 0; i < buffers; ++i) {
     uint32_t buffer = song->buffers[i], pcm_total_length = 0;
 
-    // clear out the pcm for each buffer
+    /* clear out the pcm for each buffer */
     memset(ctx->pcm, 0, sizeof(uint16_t) * ctx->pcm_length);
 
     for (uint16_t j = 0; j < packets_per_buffer; ++j) {
@@ -1210,6 +1216,25 @@ uint16_t a_song_create(a_ctx* ctx, unsigned char* data, uint32_t data_length,
   return song->id;
 }
 
+uint16_t a_song_create_fs(a_ctx* ctx, const char* file_path, const char* name,
+                          uint16_t packets_per_buffer, uint8_t buffers,
+                          uint32_t max_buffer_size, unsigned char** data_ptr) {
+  uint32_t       data_length = 0;
+  unsigned char* data        = _a_get_file(file_path, &data_length);
+
+  if (!data) {
+    printf("Unable to retrieve data from: %s\n", file_path);
+    return 0;
+  }
+
+  if (data_ptr) {
+    *data_ptr = data;
+  }
+
+  return a_song_create(ctx, data, data_length, name, packets_per_buffer,
+                       buffers, max_buffer_size);
+}
+
 uint8_t a_song_destroy(a_ctx* ctx, uint16_t id) {
   if (ctx->song_high < id - 1) {
     AUDIO_FUNC_DBG("no song in context with ID %i\n", id);
@@ -1218,17 +1243,25 @@ uint8_t a_song_destroy(a_ctx* ctx, uint16_t id) {
 
   a_song* song = &ctx->songs[id - 1];
 
+  alSourceStop(song->source);
+  alSourceUnqueueBuffers(song->source, song->buffer_count, song->buffers);
+
   alDeleteBuffers(song->buffer_count, song->buffers);
   alDeleteSources(1, &song->source);
 
   stb_vorbis_close(song->vorbis);
 
+  if (song->buffer_sizes)
+    free(song->buffer_sizes);
+
+  if (song->buffers)
+    free(song->buffers);
+
   for (uint16_t i = 0; i < ctx->layer_capacity; ++i) {
     _a_layer_remove(&ctx->layers[i], id, 0);
   }
 
-  free(song->buffers);
-  free(song->vorbis);
+  memset(song, 0, sizeof(a_song));
 
   return 1;
 }
@@ -1267,11 +1300,11 @@ uint8_t a_song_play(a_ctx* ctx, uint16_t layer_id, uint16_t song_id,
 
   a_song* song = &ctx->songs[song_id - 1];
 
-#if !defined(ASTERA_AL_NO_FX)
-  // Apply fx
+#if !defined(AUDIO_AL_NO_FX)
+  /* Apply fx */
   if (req->fx_count > 0) {
     for (uint16_t i = 0; i < req->fx_count; ++i) {
-      // Make sure it's valid within the range of effects
+      /* Make sure it's valid within the range of effects */
       if (req->fx[i] <= ctx->fx_capacity && req->fx[i] > 0) {
         alSource3i(song->source, AL_AUXILIARY_SEND_FILTER,
                    (ALint)ctx->fx_slots[req->fx[i] - 1].slot_id, i, 0);
@@ -1281,10 +1314,10 @@ uint8_t a_song_play(a_ctx* ctx, uint16_t layer_id, uint16_t song_id,
     }
   }
 
-  // Apply filters
+  /* Apply filters */
   if (req->filter_count > 0) {
     for (uint16_t i = 0; i < req->filter_count; ++i) {
-      // Make sure it's valid within the range of filters
+      /* Make sure it's valid within the range of filters */
       if (req->filters[i] <= ctx->filter_capacity && req->filters[i] > 0) {
         alSourcei(song->source, AL_DIRECT_FILTER,
                   ctx->filter_slots[req->filters[i] - 1].al_id);
@@ -1440,7 +1473,7 @@ uint16_t a_song_get_id(a_ctx* ctx, const char* name) {
 
   for (uint16_t i = 0; i < ctx->song_high; ++i) {
     if (strcmp(ctx->song_names[i], name) == 0) {
-      // Song IDs are their index + 1
+      /* Song IDs are their index + 1 */
       return i + 1;
     }
   }
@@ -1470,7 +1503,7 @@ uint16_t a_buf_create(a_ctx* ctx, unsigned char* data, uint32_t data_length,
 
   a_buf* buffer = 0;
 
-  // Find open buffer
+  /* Find open buffer */
   for (uint16_t i = 0; i < ctx->buffer_high; ++i) {
     if (ctx->buffers[i].buf == 0) {
       buffer = &ctx->buffers[i];
@@ -1517,7 +1550,7 @@ uint16_t a_buf_create(a_ctx* ctx, unsigned char* data, uint32_t data_length,
   } else {
     int16_t channels    = _a_load_int16(data, 22);
     int32_t sample_rate = _a_load_int32(data, 24);
-    // int32_t byte_rate   = _a_load_int32(data, 28);
+    /* int32_t byte_rate   = _a_load_int32(data, 28); */
     int32_t bps = _a_load_int16(data, 34);
 
     if (strncmp((const char*)&data[36], "data", 4) != 0) {
@@ -1672,7 +1705,7 @@ a_req a_req_create(a_vec3 position, float gain, float range, uint8_t loop,
 }
 
 uint16_t a_fx_create(a_ctx* ctx, a_fx_type type, void* data) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (!(type == FX_REVERB || type == FX_EQ)) {
     AUDIO_FUNC_DBG("invalid type of effect passed.\n");
     return 0;
@@ -1753,17 +1786,17 @@ uint16_t a_fx_create(a_ctx* ctx, a_fx_type type, void* data) {
 
   alAuxiliaryEffectSloti(slot->slot_id, AL_EFFECTSLOT_EFFECT, slot->effect_id);
 
-  // NOTE: slot->id is the index + 1 of the slot in the context's array of
-  // slots
+  /* NOTE: slot->id is the index + 1 of the slot in the context's array of
+     slots */
   return slot->id;
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return 0;
 #endif
 }
 
 uint8_t a_fx_destroy(a_ctx* ctx, uint16_t fx_id) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (fx_id <= 0 || fx_id > ctx->fx_capacity) {
     AUDIO_FUNC_DBG("no fx in that slot.\n");
     return 0;
@@ -1792,13 +1825,13 @@ uint8_t a_fx_destroy(a_ctx* ctx, uint16_t fx_id) {
 
   return 1;
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return 0;
 #endif
 }
 
 uint8_t a_fx_update(a_ctx* ctx, uint16_t fx_id) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (fx_id <= 0 || fx_id > ctx->fx_capacity) {
     AUDIO_FUNC_DBG("no fx in slot: %i\n", fx_id);
     return 0;
@@ -1845,13 +1878,13 @@ uint8_t a_fx_update(a_ctx* ctx, uint16_t fx_id) {
 
   return 1;
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return 0;
 #endif
 }
 
 a_fx_type a_fx_get_type(a_ctx* ctx, uint16_t fx_id) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (fx_id <= 0 || fx_id > ctx->fx_capacity) {
     AUDIO_FUNC_DBG("no fx in slot %i\n", fx_id);
     return 0;
@@ -1859,13 +1892,13 @@ a_fx_type a_fx_get_type(a_ctx* ctx, uint16_t fx_id) {
 
   return ctx->fx_slots[fx_id - 1].type;
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return 0;
 #endif
 }
 
 a_fx* a_fx_get_slot(a_ctx* ctx, uint16_t fx_id) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (fx_id <= 0 || fx_id > ctx->fx_capacity) {
     AUDIO_FUNC_DBG("no fx in slot %i\n", fx_id);
     return 0;
@@ -1873,13 +1906,13 @@ a_fx* a_fx_get_slot(a_ctx* ctx, uint16_t fx_id) {
 
   return &ctx->fx_slots[fx_id - 1];
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return 0;
 #endif
 }
 
 a_fx_reverb a_fx_reverb_default(void) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   return (a_fx_reverb){
       .density               = AL_REVERB_DEFAULT_DENSITY,
       .diffusion             = AL_REVERB_DEFAULT_DIFFUSION,
@@ -1895,7 +1928,7 @@ a_fx_reverb a_fx_reverb_default(void) {
       .room_rolloff_factor   = AL_REVERB_DEFAULT_ROOM_ROLLOFF_FACTOR,
       .decay_hflimit         = AL_REVERB_DEFAULT_DECAY_HFLIMIT};
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return (a_fx_reverb){0};
 #endif
 }
@@ -1907,7 +1940,7 @@ a_fx_reverb a_fx_reverb_create(float density, float diffusion, float gain,
                                float  air_absorption_gainhf,
                                float  room_rolloff_factor,
                                int8_t decay_hflimit) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   a_fx_reverb rev;
   rev = (a_fx_reverb){
       .density   = _a_clamp(density, 0.f, 1.f, AL_REVERB_DEFAULT_DENSITY),
@@ -1934,7 +1967,7 @@ a_fx_reverb a_fx_reverb_create(float density, float diffusion, float gain,
 
   return rev;
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return (a_fx_reverb){0};
 #endif
 }
@@ -1943,7 +1976,7 @@ a_fx_eq a_fx_eq_create(float low_gain, float low_cutoff, float mid1_gain,
                        float mid1_center, float mid1_width, float mid2_gain,
                        float mid2_center, float mid2_width, float high_gain,
                        float high_cutoff) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   return (a_fx_eq){.low_gain    = _a_clamp(low_gain, 0.126f, 7.943f, 1.f),
                    .low_cutoff  = _a_clamp(low_cutoff, 50.f, 800.f, 200.f),
                    .mid1_gain   = _a_clamp(mid1_gain, 0.126f, 7.943f, 1.f),
@@ -1956,14 +1989,14 @@ a_fx_eq a_fx_eq_create(float low_gain, float low_cutoff, float mid1_gain,
                    .high_cutoff =
                        _a_clamp(high_cutoff, 4000.f, 16000.f, 6000.f)};
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return (a_fx_eq){0};
 #endif
 }
 
 uint16_t a_filter_create(a_ctx* ctx, a_filter_type type, float gain, float hf,
                          float lf) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (ctx->filter_count == ctx->filter_capacity) {
     AUDIO_FUNC_DBG("no free slots.\n");
     return 0;
@@ -2024,13 +2057,13 @@ uint16_t a_filter_create(a_ctx* ctx, a_filter_type type, float gain, float hf,
 
   return slot->id;
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return 0;
 #endif
 }
 
 uint8_t a_filter_update(a_ctx* ctx, uint16_t filter_id) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (filter_id > ctx->filter_capacity || filter_id <= 0) {
     AUDIO_FUNC_DBG("no filter in slot %i\n", filter_id);
     return 0;
@@ -2056,13 +2089,13 @@ uint8_t a_filter_update(a_ctx* ctx, uint16_t filter_id) {
 
   return 1;
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return 0;
 #endif
 }
 
 uint8_t a_filter_destroy(a_ctx* ctx, uint16_t filter_id) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (filter_id > ctx->filter_capacity || filter_id <= 0) {
     AUDIO_FUNC_DBG("no filter in slot %i\n", filter_id);
     return 0;
@@ -2074,13 +2107,13 @@ uint8_t a_filter_destroy(a_ctx* ctx, uint16_t filter_id) {
 
   return 1;
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return 0;
 #endif
 }
 
 a_filter* a_filter_get_slot(a_ctx* ctx, uint16_t filter_id) {
-#if !defined(ASTERA_AL_NO_FX)
+#if !defined(AUDIO_AL_NO_FX)
   if (filter_id > ctx->filter_capacity || filter_id <= 0) {
     AUDIO_FUNC_DBG("no filter in slot %i\n", filter_id);
     return 0;
@@ -2088,7 +2121,7 @@ a_filter* a_filter_get_slot(a_ctx* ctx, uint16_t filter_id) {
 
   return &ctx->filter_slots[filter_id - 1];
 #else
-  AUDIO_FUNC_DBG("ASTERA_AL_NO_FX is defined\n");
+  AUDIO_FUNC_DBG("AUDIO_AL_NO_FX is defined\n");
   return 0;
 #endif
 }

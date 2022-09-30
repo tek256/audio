@@ -7,8 +7,6 @@
     </p>
 </div>
 
-### NOTE: Currently this repository is a work in progress
-
 ### About
 audio is a cross platform audio engine aimed at showing the approachability of rolling your own audio system. None of the concepts in this library are new or too complex that the average programmer can't effectively understand them!
 
