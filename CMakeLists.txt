@@ -82,6 +82,12 @@ option(AUDIO_DEBUG_ENGINE OFF)
 # NOTE: Mac OSX OpenAL Effects are currently disabled by default
 option(AUDIO_DISABLE_AUDIO_FX OFF)
 
+# TODO patch effects on Apple
+if(APPLE)
+  set(AUDIO_DISABLE_AUDIO_FX ON)
+endif()
+
+
 # Get all of our source files into a list
 file(GLOB sources CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/src/*.c)
 add_library(${PROJECT_NAME} STATIC)

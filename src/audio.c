@@ -676,30 +676,33 @@ uint8_t a_ctx_destroy(a_ctx* ctx) {
     free(ctx->songs);
   }
 
-  if (ctx->fx_capacity && ctx->fx_slots) {
-    for (uint16_t i = 0; i < ctx->fx_capacity; ++i) {
-      a_fx* fx = &ctx->fx_slots[i];
-      if (fx->effect_id != 0) {
-        alDeleteEffects(1, &fx->effect_id);
-      }
+#if !defined(AUDIO_AL_NO_FX)
+  if (ctx->use_fx) {
+    if (ctx->fx_capacity && ctx->fx_slots) {
+      for (uint16_t i = 0; i < ctx->fx_capacity; ++i) {
+        a_fx* fx = &ctx->fx_slots[i];
+        if (fx->effect_id != 0) {
+          alDeleteEffects(1, &fx->effect_id);
+        }
 
-      if (fx->slot_id != 0) {
-        alDeleteAuxiliaryEffectSlots(1, &fx->slot_id);
+        if (fx->slot_id != 0) {
+          alDeleteAuxiliaryEffectSlots(1, &fx->slot_id);
+        }
       }
-    }
-    free(ctx->fx_slots);
-  }
-
-  if (ctx->filter_capacity && ctx->filter_slots) {
-    for (uint16_t i = 0; i < ctx->filter_capacity; ++i) {
-      if (ctx->filter_slots[i].al_id != 0) {
-        alDeleteFilters(1, &ctx->filter_slots[i].al_id);
-      }
+      free(ctx->fx_slots);
     }
 
-    free(ctx->filter_slots);
-  }
+    if (ctx->filter_capacity && ctx->filter_slots) {
+      for (uint16_t i = 0; i < ctx->filter_capacity; ++i) {
+        if (ctx->filter_slots[i].al_id != 0) {
+          alDeleteFilters(1, &ctx->filter_slots[i].al_id);
+        }
+      }
 
+      free(ctx->filter_slots);
+    }
+  }
+#endif
   if (ctx->buffers) {
     for (uint16_t i = 0; i < ctx->buffer_capacity; ++i) {
       if (ctx->buffers[i].buf != 0) {
