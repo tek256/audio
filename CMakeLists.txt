@@ -56,7 +56,7 @@ else()
 endif()
 
 # Require just OpenALSoft if on apple
-if(APPLE AND NOT OpenALSoft_FOUND)
+if(APPLE AND NOT ${OPENAL_SOFTFOUND})
   message(FATAL_ERROR "Could not find OpenALSoft")
 endif()
 
@@ -64,11 +64,6 @@ endif()
 cmake_dependent_option(AUDIO_BUILD_EXAMPLES 
   "Build AUDIO's examples" ON
   "CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME" ON)
-
-# Build out the utility tools
-cmake_dependent_option(AUDIO_BUILD_TOOLS
-  "Build AUDIO's tools" ON
-  "CMAKE_BUILD_TYPE STREQUAL Debug" ON)
 
 # Enables output using the AUDIO_DBG macro
 cmake_dependent_option(AUDIO_DEBUG_OUTPUT
@@ -160,15 +155,6 @@ if(AUDIO_BUILD_EXAMPLES)
   else()
     message(WARNING "Unable to find examples directory, disabling AUDIO_BUILD_EXAMPLES")
     set(AUDIO_BUILD_EXAMPLES OFF)
-  endif()
-endif()
-
-if(AUDIO_BUILD_TOOLS)
-  if(EXISTS "${PROJECT_SOURCE_DIR}/tools")
-    add_subdirectory("${PROJECT_SOURCE_DIR}/tools")
-  else()
-    message(WARNING "Unable to find tools directory, disabling AUDIO_BUILD_TOOLS")
-    set(AUDIO_BUILD_TOOLS OFF)
   endif()
 endif()
 
