@@ -16,6 +16,7 @@
 #elif defined(__APPLE__)
 #define HAVE_MACH_TIMER
 #include <mach/mach_time.h>
+#include <uinstd.h>
 #elif defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -60,7 +61,7 @@ static uint64_t get_ns() {
 
 double get_time() { return get_ns() / 1e6; }
 
-double sleep(double duration) {
+double a_sleep(double duration) {
 #if defined(_WIN32) || defined(_WIN64)
   Sleep(duration * 1e-3);
 #elif _POSIX_C_SOURCE >= 199309L
@@ -166,7 +167,7 @@ int main(void) {
       break;
     }
 
-    sleep(target_update_rate - delta);
+    a_sleep(target_update_rate - delta);
   }
 
   a_song_stop(ctx, song_id);

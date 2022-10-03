@@ -27,13 +27,10 @@ if (WIN32)
   list(APPEND CMAKE_PREFIX_PATH "${openalwin_SOURCE_DIR}")
 endif()
 
-find_package(OpenGL REQUIRED)
-
 # OpenAL must be installed on the system, env "OPENALDIR" must be set
 find_package(OpenALSoft)
-find_package(OpenAL)
 
-if(OpenALSoft_FOUND)
+if(OPENALSOFT_FOUND)
   if(OPENALSOFT_FOUND AND NOT TARGET OpenAL::AL)
     message("OpenALSoft FOUND ${OPENAL-SOFTFOUND}")
     add_library(OpenAL::AL UNKNOWN IMPORTED)
