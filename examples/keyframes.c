@@ -16,7 +16,7 @@
 #elif defined(__APPLE__)
 #define HAVE_MACH_TIMER
 #include <mach/mach_time.h>
-#include <uinstd.h>
+#include <unistd.h>
 #elif defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
