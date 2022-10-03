@@ -230,6 +230,41 @@ typedef struct {
   a_req* req;
 } a_sfx;
 
+typedef enum {
+  EASE_NONE = 0,
+  EASE_IN,
+  EASE_OUT,
+  EASE_EASE,
+} a_keyframe_ease;
+
+/* A key pair value with attributes */
+typedef struct {
+  float           time;
+  float           value;
+  a_keyframe_ease ease;
+} a_keyframe;
+
+/* A struct for holding a series of keyframes */
+typedef struct {
+  a_keyframe* keyframes;
+  uint32_t    keyframe_count;
+} a_timeline;
+
+typedef struct {
+  /* time - the current time in ms
+   * value - the current value calculated from the keyframes */
+  float time;
+  float value;
+
+  /* current_index - the current index within keyframes the timeline is at */
+  uint32_t current_index;
+  /* timeline - the source data of keyframes we reference */
+  a_timeline* timeline;
+
+  /* output - where to apply the current value */
+  float* output;
+} a_timeline_view;
+
 typedef struct {
   uint16_t id;
 
@@ -242,6 +277,30 @@ typedef struct {
 
   float gain;
 } a_layer;
+
+/* Structure for creating an audio context with parameters */
+typedef struct {
+  /* device - device to target (0/null = OS default) */
+  const char* device;
+  /* max_layers - max number of layers sfx/songs are assignable to */
+  uint8_t max_layers;
+  /* max_buffers - max # of buffers (sounds) you can have at one time */
+  uint16_t max_buffers;
+  /* max_buffers - max # of sfx that can be playing at one time */
+  uint16_t max_sfx;
+  /* max_songs - max # of songs that can be playing at one time */
+  uint16_t max_songs;
+  /* max_filters - max # of audio filters that can be used at once */
+  uint16_t max_filters;
+  /* max_fx - max # of audio effects that can be used at once */
+  uint16_t max_fx;
+  /* max_mono_sources - max # of mono sources that can exist at once */
+  uint16_t max_mono_sources;
+  /* max_stereo_sources - max # of stereo sources that can exist at once */
+  uint16_t max_stereo_sources;
+  /* pcm_size - size of the PCM buffer for updating songs (bigger the better) */
+  uint32_t pcm_size;
+} a_ctx_info;
 
 /* See audio.c for a_ctx definition */
 typedef struct a_ctx a_ctx;
@@ -260,17 +319,14 @@ const char* a_ctx_get_device(a_ctx* ctx, uint8_t* string_length);
  * returns 1 = yes, 0 = no */
 uint8_t a_can_play(a_ctx* ctx);
 
+/* Get a  default formatted context info for creating a context
+ * returns: Formatted a_ctx_info struct with defaults */
+a_ctx_info a_ctx_info_default(void);
+
 /* Create an audio context for playback
- * device - the device's name to use (NULL for default)
- * layers - the number of layers to create for managing sounds
- * max_sfx - the max amount of sfx for the context to handle
- * max_buffers - the max amount of audio buffers for the context to handle
- * max_fx - the max amount of audio fx for the context to handle
- * max_songs - the max amount of songs for the context to handle
- * pcm_size - the size of the PCM buffer for OGG vorbis decoding */
-a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
-                    uint16_t max_buffers, uint16_t max_songs, uint16_t max_fx,
-                    uint16_t max_filters, uint32_t pcm_size);
+ * ctx_info - the parameters/info needed to create the context requested
+ * Returns: allocated audio context structure used for playback */
+a_ctx* a_ctx_create(a_ctx_info ctx_info);
 
 /* Destroy the Audio Context & all of its contents */
 uint8_t a_ctx_destroy(a_ctx* ctx);
@@ -385,7 +441,7 @@ time_s a_song_get_length(a_ctx* ctx, uint16_t song_id);
 /* Set a song to play from a given time
  * ctx - the context that contains the song
  * song_id - the ID of the song returned on creation
- * from_start - the time (in Milliseconds) from the start of the song
+ * from_start - the time (in milliseconds) from the start of the song
  * returns: success = 1, fail = 0 */
 uint8_t a_song_set_time(a_ctx* ctx, uint16_t song_id, time_s from_start);
 
@@ -534,7 +590,7 @@ a_fx_type a_fx_get_type(a_ctx* ctx, uint16_t fx_id);
 a_fx* a_fx_get_slot(a_ctx* ctx, uint16_t fx_id);
 
 /* Create a the default preset of the reverb effect
- *              (see struct definition for values) */
+ *               (see struct definition for values) */
 a_fx_reverb a_fx_reverb_default(void);
 
 /* Create an instance of the reverb effect
@@ -545,6 +601,10 @@ a_fx_reverb a_fx_reverb_create(float density, float diffusion, float gain,
                                float late_gain, float late_delay,
                                float air_absorption_gainhf,
                                float room_rolloff_factor, int8_t decay_hflimit);
+
+/* Create a default preset of the EQ effect
+ *       (see struct definition for values) */
+a_fx_eq a_fx_eq_default(void);
 
 /* Create an instance of the EQ effect
  * returns: the formatted EQ effect structure */
@@ -644,6 +704,52 @@ uint8_t a_layer_set_gain(a_ctx* ctx, uint16_t layer_id, float gain);
  * layer_id - the ID of the layer
  * returns: the gain of the layer, -1.f if not found */
 float a_layer_get_gain(a_ctx* ctx, uint16_t layer_id);
+
+/* Create a keyframe timeline
+ * times - the timestamp of each keyframe
+ * values - the value of each keyframe
+ * eases - how each keyframe should ease
+ * count - the number of keyframes
+ * returns: a keyframe timeline */
+a_timeline a_timeline_create(float* times, float* values,
+                             a_keyframe_ease* eases, uint32_t count);
+
+/* Free all the data from the timeline */
+void a_timeline_destroy(a_timeline* timeline);
+
+/* Create a view of a timeline
+ * timeline - timeline data to follow
+ * returns: view of a timeline */
+a_timeline_view a_timeline_create_view(a_timeline* timeline);
+
+/* Get the current value from a timeline view
+ * view - the current view of a timeline
+ * returns: value based on current time within the timeline */
+float a_timeline_get_value(a_timeline_view* view);
+
+/* Update a timeline view
+ * view - the current view of a timeline to update
+ * dt - the delta time to change */
+void a_timeline_update(a_timeline_view* view, float dt);
+
+/* Set a timeline view's time
+ * view - the view of a timeline to update
+ * time - the time in ms to set the view to */
+void a_timeline_set_time(a_timeline_view* view, float time);
+
+/* Set where to output the value of a timeline view when updated
+ * view - timeline view to output current values from
+ * output - pointer to update with values */
+void a_timeline_set_output(a_timeline_view* view, float* output);
+
+/* Calculate a given value from a specific time
+ * timeline - timeline to follow/calculate from
+ * time - the time in ms to calculate the value at
+ * returns: calculated value from the timeline */
+float a_timeline_calc_value_at(a_timeline* timeline, float time);
+
+/* Reset the time of a timeline and values along with it */
+void a_timeline_reset(a_timeline_view* view);
 
 #ifdef __cplusplus
 }

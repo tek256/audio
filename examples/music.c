@@ -3,8 +3,9 @@
 #include <audio/audio.h>
 
 int main(void) {
+  a_ctx_info ctx_info = a_ctx_info_default();
   // Create the overall audio context
-  a_ctx* ctx = a_ctx_create(0, 2, 0, 16, 2, 2, 2, 4096 * 4);
+  a_ctx* ctx = a_ctx_create(ctx_info);
 
   uint16_t music_layer_id = a_layer_create(ctx, "music", 0, 1);
   a_layer_set_gain(ctx, music_layer_id, 0.05f);

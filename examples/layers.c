@@ -3,8 +3,11 @@
 #include <stdlib.h>
 
 int main(int argc, char** argv) {
+  // Info needed for how to create the audio context
+  a_ctx_info ctx_info = a_ctx_info_default();
+
   // Create the overall audio context
-  a_ctx* ctx = a_ctx_create(0, 2, 16, 16, 16, 5, 2, 4096 * 4);
+  a_ctx* ctx = a_ctx_create(ctx_info);
 
   uint16_t music_layer_id = a_layer_create(ctx, "music", 0, 1);
   uint16_t sfx_layer_id   = a_layer_create(ctx, "sfx", 5, 0);

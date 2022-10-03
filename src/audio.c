@@ -34,6 +34,9 @@ struct a_ctx {
   ALCcontext* context;
   ALCdevice*  device;
 
+  /* info - the info used to create the context */
+  a_ctx_info info;
+
   /* listener - the listener values for OpenAL */
   a_listener listener;
 
@@ -93,6 +96,13 @@ struct a_ctx {
 
   /* error - the last error value set */
   int32_t error;
+
+  /* max_mono - max number of mono sources
+   * max_stereo - max number of stereo sources
+   * max_buffers - max number of buffers */
+  uint32_t max_mono;
+  uint32_t max_stereo;
+  uint32_t max_buffers;
 };
 
 #if !defined(AUDIO_AL_NO_FX)
@@ -435,9 +445,22 @@ const char* a_ctx_get_device(a_ctx* ctx, uint8_t* string_length) {
 
 uint8_t a_can_play(a_ctx* ctx) { return ctx->allow; }
 
-a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
-                    uint16_t max_buffers, uint16_t max_songs, uint16_t max_fx,
-                    uint16_t max_filters, uint32_t pcm_size) {
+a_ctx_info a_ctx_info_default() {
+  return (a_ctx_info){
+      .device             = 0,
+      .max_layers         = 4,
+      .max_buffers        = 16,
+      .max_sfx            = 16,
+      .max_songs          = 2,
+      .max_filters        = 0,
+      .max_fx             = 0,
+      .max_mono_sources   = 256,
+      .max_stereo_sources = 256,
+      .pcm_size           = 4096 * 4,
+  };
+}
+
+a_ctx* a_ctx_create(a_ctx_info ctx_info) {
   a_ctx* ctx = (a_ctx*)calloc(1, sizeof(a_ctx));
 
   if (!ctx) {
@@ -445,7 +468,7 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
     return 0;
   }
 
-  ALCdevice* al_device = alcOpenDevice(device);
+  ALCdevice* al_device = alcOpenDevice(ctx_info.device);
 
 #if !defined(AUDIO_AL_NO_FX)
   if (alcIsExtensionPresent(al_device, "ALC_EXT_EFX") == AL_FALSE) {
@@ -455,21 +478,26 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
   }
 
   /* Disable effects if we're not using any of them */
-  if (!max_fx && !max_filters) {
+  if (!ctx_info.max_fx && !ctx_info.max_filters) {
     ctx->use_fx = 0;
   }
 #else
   ctx->use_fx = 0;
 #endif
 
-  int attribs[4] = {0};
+  int attribs[6] = {0};
 
 #if !defined(AUDIO_AL_NO_FX) && defined(ALC_MAX_AUXILIARY_SENDS)
   if (ctx->use_fx) {
-    attribs[0] = ALC_MAX_AUXILIARY_SENDS;
-    attribs[1] = 4;
+    attribs[4] = ALC_MAX_AUXILIARY_SENDS;
+    attribs[5] = 4;
   }
 #endif
+
+  attribs[0] = ALC_STEREO_SOURCES;
+  attribs[1] = ctx_info.max_stereo_sources;
+  attribs[2] = ALC_MONO_SOURCES;
+  attribs[3] = ctx_info.max_mono_sources;
 
   ALCcontext* context = alcCreateContext(al_device, attribs);
 
@@ -481,6 +509,10 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
 
   ctx->context = context;
   ctx->device  = al_device;
+  ctx->info    = ctx_info;
+
+  alcGetIntegerv(al_device, ALC_MONO_SOURCES, 1, &ctx->max_mono);
+  alcGetIntegerv(al_device, ALC_STEREO_SOURCES, 1, &ctx->max_stereo);
 
 #if defined(AUDIO_AL_DISTANCE_MODEL)
   alDistanceModel(AUDIO_AL_DISTANCE_MODEL);
@@ -532,10 +564,10 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
 
 #undef LOAD_PROC
 
-    ctx->fx_capacity = max_fx;
+    ctx->fx_capacity = ctx_info.max_fx;
     ctx->fx_count    = 0;
 
-    if (max_fx) {
+    if (ctx_info.max_fx) {
       ctx->fx_slots = (a_fx*)calloc(ctx->fx_capacity, sizeof(a_fx));
 
       if (!ctx->fx_slots) {
@@ -556,9 +588,9 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
     }
 
     ctx->filter_count    = 0;
-    ctx->filter_capacity = max_filters;
+    ctx->filter_capacity = ctx_info.max_filters;
 
-    if (max_filters) {
+    if (ctx_info.max_filters) {
       ctx->filter_slots =
           (a_filter*)calloc(ctx->filter_capacity, sizeof(a_filter));
 
@@ -574,7 +606,7 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
         return 0;
       }
 
-      for (uint16_t i = 0; i < max_filters; ++i) {
+      for (uint16_t i = 0; i < ctx_info.max_filters; ++i) {
         ctx->filter_slots[i].id = i + 1;
       }
     } else {
@@ -583,22 +615,22 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
   }
 #endif
 
-  ctx->pcm_length = pcm_size;
+  ctx->pcm_length = ctx_info.pcm_size;
   ctx->pcm_index  = 0;
-  if (pcm_size) {
-    ctx->pcm = (uint16_t*)calloc(pcm_size, sizeof(uint16_t));
+  if (ctx_info.pcm_size) {
+    ctx->pcm = (uint16_t*)calloc(ctx_info.pcm_size, sizeof(uint16_t));
   }
 
   /* Create the resource arrays */
-  ctx->song_capacity = max_songs;
+  ctx->song_capacity = ctx_info.max_songs;
   ctx->song_count    = 0;
   ctx->song_high     = 0;
 
-  if (max_songs) {
+  if (ctx_info.max_songs) {
     ctx->songs      = (a_song*)calloc(ctx->song_capacity, sizeof(a_song));
     ctx->song_names = (const char**)calloc(ctx->song_capacity, sizeof(char*));
 
-    for (uint16_t i = 0; i < max_songs; ++i) {
+    for (uint16_t i = 0; i < ctx_info.max_songs; ++i) {
       ctx->songs[i].id = i + 1;
       alGenSources(1, &ctx->songs[i].source);
       ctx->songs[i].req = 0;
@@ -606,25 +638,26 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
   }
 
   ctx->buffer_count    = 0;
-  ctx->buffer_capacity = max_buffers;
+  ctx->buffer_capacity = ctx_info.max_buffers;
   ctx->buffer_high     = 0;
 
-  if (max_buffers) {
-    ctx->buffers      = (a_buf*)calloc(max_buffers, sizeof(a_buf));
-    ctx->buffer_names = (const char**)calloc(max_buffers, sizeof(char*));
+  if (ctx_info.max_buffers) {
+    ctx->buffers = (a_buf*)calloc(ctx_info.max_buffers, sizeof(a_buf));
+    ctx->buffer_names =
+        (const char**)calloc(ctx_info.max_buffers, sizeof(char*));
 
-    for (uint16_t i = 0; i < max_buffers; ++i) {
+    for (uint16_t i = 0; i < ctx_info.max_buffers; ++i) {
       ctx->buffers[i].id = i + 1;
     }
   }
 
-  ctx->sfx_capacity = max_sfx;
+  ctx->sfx_capacity = ctx_info.max_sfx;
   ctx->sfx_count    = 0;
 
-  if (max_sfx) {
+  if (ctx_info.max_sfx) {
     ctx->sfx = (a_sfx*)calloc(ctx->sfx_capacity, sizeof(a_sfx));
 
-    for (uint16_t i = 0; i < max_sfx; ++i) {
+    for (uint16_t i = 0; i < ctx_info.max_sfx; ++i) {
       ctx->sfx[i].id = i + 1;
       alGenSources(1, &ctx->sfx[i].source);
       ctx->sfx[i].req = 0;
@@ -632,12 +665,12 @@ a_ctx* a_ctx_create(const char* device, uint8_t layers, uint16_t max_sfx,
   }
 
   ctx->layer_count    = 0;
-  ctx->layer_capacity = layers;
+  ctx->layer_capacity = ctx_info.max_layers;
 
-  if (layers) {
-    ctx->layers = (a_layer*)calloc(layers, sizeof(a_layer));
+  if (ctx_info.max_layers) {
+    ctx->layers = (a_layer*)calloc(ctx_info.max_layers, sizeof(a_layer));
 
-    for (uint16_t i = 0; i < layers; ++i) {
+    for (uint16_t i = 0; i < ctx_info.max_layers; ++i) {
       ctx->layers[i].gain = 1.f;
     }
   }
@@ -1975,6 +2008,11 @@ a_fx_reverb a_fx_reverb_create(float density, float diffusion, float gain,
 #endif
 }
 
+a_fx_eq a_fx_eq_default(void) {
+  return a_fx_eq_create(1.0f, 200.0f, 1.0f, 500.0f, 1.0f, 1.0f, 3000.0f, 1.0f,
+                        1.0f, 6000.0f);
+}
+
 a_fx_eq a_fx_eq_create(float low_gain, float low_cutoff, float mid1_gain,
                        float mid1_center, float mid1_width, float mid2_gain,
                        float mid2_center, float mid2_width, float high_gain,
@@ -2244,3 +2282,169 @@ float a_layer_get_gain(a_ctx* ctx, uint16_t layer_id) {
   return layer->gain;
 }
 
+static int keyframe_compare(const void* a, const void* b) {
+  const a_keyframe* a_frame = (const a_keyframe*)a;
+  const a_keyframe* b_frame = (const a_keyframe*)b;
+
+  return (a_frame->time - b_frame->time);
+}
+
+a_timeline a_timeline_create(float* times, float* values,
+                             a_keyframe_ease* eases, uint32_t count) {
+  a_timeline timeline = (a_timeline){.keyframe_count = count, 0};
+
+  timeline.keyframes = calloc(count, sizeof(a_keyframe));
+  for (uint32_t i = 0; i < count; ++i) {
+    timeline.keyframes[i] = (a_keyframe){
+        .time  = times[i],
+        .value = values[i],
+        .ease  = eases[i],
+    };
+  }
+
+  qsort(timeline.keyframes, count, sizeof(a_keyframe), keyframe_compare);
+
+  return timeline;
+}
+
+void a_timeline_destroy(a_timeline* timeline) { free(timeline->keyframes); }
+
+a_timeline_view a_timeline_create_view(a_timeline* timeline) {
+  a_timeline_view view = (a_timeline_view){.timeline = timeline, 0};
+
+  // Start with the first keyframe's value
+  if (timeline->keyframe_count > 0) {
+    view.value = timeline->keyframes[0].value;
+  }
+
+  view.time          = 0.0f;
+  view.current_index = 0;
+
+  return view;
+}
+
+static float f_clamp(float min, float max, float value) {
+  return (value > max) ? max : (value < min) ? min : value;
+}
+
+static float smooth_step(float t) { return t * t * (3.0f - 2.0f * t); }
+
+float a_timeline_get_value(a_timeline_view* view) { return view->value; }
+
+void a_timeline_update(a_timeline_view* view, float dt) {
+  if (view->output) {
+    *view->output = view->value;
+  }
+
+  if (dt > 0.0f) {
+    view->time += dt;
+
+    if (view->current_index < view->timeline->keyframe_count) {
+      a_keyframe* next_keyframe =
+          &view->timeline->keyframes[view->current_index + 1];
+
+      // If we have a new next keyframe, make sure to iterate!
+      if (view->time > next_keyframe->time) {
+        view->current_index++;
+      }
+
+      // Is there a potential for a next keyframe?
+      if (view->current_index < view->timeline->keyframe_count) {
+        a_keyframe* prev_keyframe = next_keyframe;
+        next_keyframe = &view->timeline->keyframes[view->current_index];
+
+        float time_progress = (view->time - prev_keyframe->time) /
+                              (next_keyframe->time - prev_keyframe->time);
+
+        // Do we need to smoothstep?
+        if (((next_keyframe->ease == EASE_IN ||
+              next_keyframe->ease == EASE_EASE) &&
+             time_progress > 0.5f) ||
+            ((prev_keyframe->ease == EASE_OUT ||
+              prev_keyframe->ease == EASE_EASE) &&
+             time_progress < 0.5f)) {
+          view->value = (smooth_step(time_progress) *
+                         (next_keyframe->value - prev_keyframe->value)) +
+                        prev_keyframe->value;
+        } else { // If not just lerp the value!
+          view->value =
+              (time_progress * (next_keyframe->value - prev_keyframe->value)) +
+              prev_keyframe->value;
+        }
+
+        if (view->output) {
+          *view->output = view->value;
+        }
+      } else { // If not we just stick with the value of the most recent one
+        view->value = next_keyframe->value;
+      }
+    }
+  }
+}
+
+void a_timeline_set_time(a_timeline_view* view, float time) {
+  for (uint32_t i = 0; i < view->timeline->keyframe_count; ++i) {
+    if (view->timeline->keyframes[i].time > time) {
+      if (i > 0)
+        view->current_index = i - 1;
+      else
+        view->current_index = 0;
+    }
+
+    if (i == view->timeline->keyframe_count - 1) {
+      view->current_index = i;
+    }
+  }
+
+  view->time  = time;
+  view->value = a_timeline_calc_value_at(view, view->time);
+}
+
+void a_timeline_set_output(a_timeline_view* view, float* output) {
+  view->output = output;
+
+  if (view->output) {
+    *view->output = view->value;
+  }
+}
+
+float a_timeline_calc_value_at(a_timeline* timeline, float time) {
+  uint32_t prev_index = 0;
+  uint32_t next_index = 0;
+  for (uint32_t i = 0; i < timeline->keyframe_count; ++i) {
+    if (timeline->keyframes[i].time > time) {
+      if (i > 0)
+        prev_index = i - 1;
+      next_index = i;
+      break;
+    }
+  }
+
+  if (next_index == prev_index) {
+    return timeline->keyframes[next_index].value;
+  }
+
+  a_keyframe prev = timeline->keyframes[prev_index];
+  a_keyframe next = timeline->keyframes[next_index];
+
+  // 0-1 time progress across the keyframes
+  float current_time = (time - prev.time) / (next.time - prev.time);
+  float progress     = (current_time * (next.value - prev.value)) + prev.value;
+
+  // Do we need to ease in or is it a linear change?
+  if (prev.ease == EASE_OUT || next.ease == EASE_IN || prev.ease == EASE_EASE ||
+      next.ease == EASE_EASE) {
+    float step =
+        (smooth_step(current_time) * (next.value - prev.value)) + prev.value;
+    return step;
+  }
+
+  return progress;
+}
+
+void a_timeline_reset(a_timeline_view* view) {
+  view->time          = 0.0f;
+  view->current_index = 0;
+  if (view->timeline->keyframe_count > 0)
+    view->value = view->timeline->keyframes[0].value;
+}
