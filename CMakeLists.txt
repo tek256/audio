@@ -122,7 +122,7 @@ endif()
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     $<$<NOT:$<PLATFORM_ID:Windows>>:m>
-    $<$<NOT:$<PLATFORM_ID:Darwin>>:OpenAL::OpenAL>)
+    OpenAL::OpenAL>)
 
 
 # set_property(TARGET ${PROJECT_NAME} PROPERTY C_VISIBILITY_PRESET "hidden")
