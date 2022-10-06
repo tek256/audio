@@ -17,42 +17,24 @@ include(FetchContent)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMake")
 
-# Use OpenAL-Soft's binaries for Windows
+FetchContent_Declare(openal-windows
+  DOWNLOAD_EXTRACT_TIMESTAMP YES
+  URL "https://openal-soft.org/openal-binaries/openal-soft-1.20.1-bin.zip")
 if (WIN32)
-  FetchContent_Declare(openalwin
-    URL "https://openal-soft.org/openal-binaries/openal-soft-1.20.1-bin.zip")
-  if (NOT openalwin_POPULATED)
-    FetchContent_Populate(openalwin)
-  endif()
-  list(APPEND CMAKE_PREFIX_PATH "${openalwin_SOURCE_DIR}")
+  FetchContent_MakeAvailable(openal-windows)
+  set(ENV{OPENALDIR} "${openal-windows_SOURCE_DIR}")
 endif()
 
-# OpenAL must be installed on the system, env "OPENALDIR" must be set
-find_package(OpenALSoft)
+find_package(OpenAL)
 
-if(OPENALSOFT_FOUND)
-  if(OPENALSOFT_FOUND AND NOT TARGET OpenAL::AL)
-    message("OpenALSoft FOUND ${OPENAL-SOFTFOUND}")
-    add_library(OpenAL::AL UNKNOWN IMPORTED)
-    set_target_properties(OpenAL::AL PROPERTIES
-      IMPORTED_LOCATION "${OPENALSOFT_LIBRARY}"
-      INTERFACE_INCLUDE_DIRECTORIES "${OPENALSOFT_INCLUDE_DIR}")
-   endif()
-   set(AL_INCLUDE ${OPENALSOFT_INCLUDE_DIR})
-elseif(OpenAL_FOUND)
-  if(OPENAL_FOUND AND NOT TARGET OpenAL::AL)
-    message("OpenAL FOUND ${OPENAL-SOFTFOUND}")
-    add_library(OpenAL::AL UNKNOWN IMPORTED)
-    set_target_properties(OpenAL::AL PROPERTIES
+if (OPENAL_FOUND AND NOT TARGET OpenAL::OpenAL)
+  add_library(OpenAL::OpenAL UNKNOWN IMPORTED)
+  set_target_properties(OpenAL::OpenAL
+    PROPERTIES
       IMPORTED_LOCATION "${OPENAL_LIBRARY}"
       INTERFACE_INCLUDE_DIRECTORIES "${OPENAL_INCLUDE_DIR}")
-  endif()
-   set(AL_INCLUDE ${OPENAL_INCLUDE_DIR})
-else()
-  message(FATAL_ERROR "Could not find OpenAL or OpenALSoft")
 endif()
 
-# Require just OpenALSoft if on apple
 if(APPLE AND NOT ${OPENAL_SOFTFOUND})
   message(FATAL_ERROR "Could not find OpenALSoft")
 endif()
@@ -97,7 +79,6 @@ target_include_directories(${PROJECT_NAME}
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/dep>
-    $<BUILD_INTERFACE:${AL_INCLUDE}>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INCLUDE_INSTALLDIR}>)
@@ -141,8 +122,7 @@ endif()
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     $<$<NOT:$<PLATFORM_ID:Windows>>:m>
-  PRIVATE
-  $<$<NOT:$<PLATFORM_ID:Darwin>>:OpenAL::AL>)
+    $<$<NOT:$<PLATFORM_ID:Darwin>>:OpenAL::OpenAL>)
 
 
 # set_property(TARGET ${PROJECT_NAME} PROPERTY C_VISIBILITY_PRESET "hidden")
