@@ -60,7 +60,6 @@ cmake_dependent_option(AUDIO_PAK_WRITE
 option(AUDIO_DEBUG_ENGINE OFF)
 
 # Disable OpenAL Audio Effects from being compiled in
-# NOTE: Mac OSX OpenAL Effects are currently disabled by default
 option(AUDIO_DISABLE_AUDIO_FX OFF)
 
 # Get all of our source files into a list

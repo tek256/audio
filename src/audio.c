@@ -1,11 +1,5 @@
 #include <audio/audio.h>
 
-#if defined(__APPLE__)
-#if !defined(AUDIO_AL_NO_FX)
-#define AUDIO_AL_NO_FX
-#endif
-#endif
-
 #if !defined(AUDIO_AL_DISTANCE_MODEL)
 #define AUDIO_AL_DISTANCE_MODEL AL_INVERSE_DISTANCE
 #endif
