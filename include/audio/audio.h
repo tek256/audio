@@ -5,6 +5,16 @@
 extern "C" {
 #endif
 
+#if defined(__APPLE__)
+#include <OpenAL/alc.h>
+#include <OpenAL/al.h>
+#else
+#include <alc.h>
+#include <al.h>
+#endif
+
+#define STB_VORBIS_HEADER_ONLY
+#include <stb_vorbis.c>
 #include <stdint.h>
 
 #if defined(AUDIO_LOWP_TIME)
@@ -13,44 +23,29 @@ typedef float time_s;
 typedef double time_s;
 #endif
 
-typedef float a_vec2[2];
 typedef float a_vec3[3];
 
-void a_vec3_set(a_vec3 dst, float x, float y, float z);
-
-/* NOTE: These are relative includes for portability's sake
- *       the cmake find_package exports them as relative so it'll work
- *       cross platform as expected */
-#if defined(__APPLE__)
-#include <OpenAL/alc.h>
-#include <OpenAL/al.h>
-#else
-#include <alc.h>
-#include <al.h>
-#endif /* defined(__APPLE__) */
-
-#define STB_VORBIS_HEADER_ONLY
-#include <stb_vorbis.c>
-
-#if !defined(AUDIO_SONG_MAX_FAILS)
-#define AUDIO_SONG_MAX_FAILS 3
-#endif
-
-#if !defined(AUDIO_DEFAUT_SFX_RANGE)
-#define AUDIO_DEFAUT_SFX_RANGE 20
-#endif
-
 typedef struct {
-  float  gain;
+  /* gain - the gain of the listener */
+  float gain;
+  /* position - the position in 3D space of the listener
+   * orientation - the euler rotation of the listener in 3D space
+   * velocity - the velocity the listener is moving at
+   * _ori - private representation of orientation for OpenAL (vec3: at, up) */
   a_vec3 position, orientation, velocity;
   float  _ori[6];
 } a_listener;
 
 typedef struct {
+  /* id - the context specific ID */
   uint16_t id;
+  /* buf - the OpenAL buffer ID */
   uint32_t buf;
+  /* channels - the # of channels the buffer uses */
   uint16_t channels;
+  /* length - the length in samples the buffer */
   uint32_t length;
+  /* sample_rate - the samples per second that the buffer uses */
   uint32_t sample_rate;
 } a_buf;
 
@@ -235,17 +230,24 @@ typedef enum {
 
 /* A key pair value with attributes */
 typedef struct {
-  float           time;
-  float           value;
+  /* time - the time in ms of this keyframe */
+  float time;
+  /* value - the value that should be at this keyframe */
+  float value;
+  /* ease - how to interpolate towards/away from this keyframe */
   a_keyframe_ease ease;
 } a_keyframe;
 
 /* A struct for holding a series of keyframes */
 typedef struct {
+  /* keyframes - all the data of the keyframe timeline */
   a_keyframe* keyframes;
-  uint32_t    keyframe_count;
+  /* keyframe_count - the # of keyframes in this timeline */
+  uint32_t keyframe_count;
 } a_timeline;
 
+/* A struct for viewing/moving around a timeline without copying all of the
+ * timeline data */
 typedef struct {
   /* time - the current time in ms
    * value - the current value calculated from the keyframes */
@@ -262,15 +264,25 @@ typedef struct {
 } a_timeline_view;
 
 typedef struct {
+  /* id - the context specific ID of this layer (used to reference it) */
   uint16_t id;
 
+  /* name - the name of this layer */
   const char* name;
 
+  /* sfx - the sfx IDs for this layer
+   * songs - the song IDs for this layer */
   uint32_t *sfx, *songs;
 
+  /* sfx_count - the # of sfx currently in the layer
+   * sfx_capacity - the max # of sfx allowed in this layer */
   uint32_t sfx_count, sfx_capacity;
+
+  /* song_count - the # of songs currently in the layer
+   * song_capacity - the max # of songs allowed in this layer */
   uint32_t song_count, song_capacity;
 
+  /* gain - gain that affects all sfx/songs in this layer */
   float gain;
 } a_layer;
 
@@ -300,6 +312,9 @@ typedef struct {
 
 /* See audio.c for a_ctx definition */
 typedef struct a_ctx a_ctx;
+
+/* Quick set a_vec3 variable values */
+void a_vec3_set(a_vec3 dst, float x, float y, float z);
 
 /* Print various info about the OpenAL EFX Extension capabilities on this
  * machine */

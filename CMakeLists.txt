@@ -17,8 +17,6 @@ include(CMakeDependentOption)
 include(GenerateExportHeader)
 include(FetchContent)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMake")
-
 FetchContent_Declare(openal-windows
   DOWNLOAD_EXTRACT_TIMESTAMP YES
   URL "https://openal-soft.org/openal-binaries/openal-soft-1.20.1-bin.zip")
@@ -59,7 +57,7 @@ cmake_dependent_option(AUDIO_PAK_WRITE
 # Enables ASAN & Pedantic output
 option(AUDIO_DEBUG_ENGINE OFF)
 
-# Disable OpenAL Audio Effects from being compiled in
+# Disable OpenAL Audio Effects from being included
 option(AUDIO_DISABLE_AUDIO_FX OFF)
 
 # Get all of our source files into a list
@@ -113,7 +111,7 @@ if(AUDIO_DEBUG_ENGINE)
     $<$<NOT:$<C_COMPILER_ID:MSVC>>:-g -fsanitize=address>)
 endif()
 
-# Link against the various libraries we need
+# Link against the libraries we need
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     $<$<NOT:$<PLATFORM_ID:Windows>>:m>
@@ -122,10 +120,12 @@ target_link_libraries(${PROJECT_NAME}
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_VISIBILITY_PRESET "hidden")
 set_property(TARGET ${PROJECT_NAME} PROPERTY VERSION ${PROJECT_VERSION})
 
+# Include our headers in projects including us
 install(DIRECTORY include/ "${PROJECT_BINARY_DIR}/include/"
   TYPE INCLUDE
   FILES_MATCHING PATTERN "*.h")
 
+# Build examples if we're told to do so and the folder exists!
 if(AUDIO_BUILD_EXAMPLES)
   if(EXISTS "${PROJECT_SOURCE_DIR}/examples")
     add_subdirectory("${PROJECT_SOURCE_DIR}/examples")

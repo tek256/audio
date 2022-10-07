@@ -4,10 +4,6 @@
 #define AUDIO_AL_DISTANCE_MODEL AL_INVERSE_DISTANCE
 #endif
 
-#if !defined(AUDIO_AL_ROLLOFF_FACTOR)
-#define AUDIO_AL_ROLLOFF_FACTOR 1.f
-#endif
-
 #undef STB_VORBIS_HEADER_ONLY
 #define STB_VORBIS_MAX_CHANNELS 2
 #include <stb_vorbis.c>
