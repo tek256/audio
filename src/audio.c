@@ -138,6 +138,12 @@ static LPALGETAUXILIARYEFFECTSLOTF    alGetAuxiliaryEffectSlotf;
 static LPALGETAUXILIARYEFFECTSLOTFV   alGetAuxiliaryEffectSlotfv;
 #endif
 
+void a_vec3_set(a_vec3 dst, float x, float y, float z) {
+  dst[0] = x;
+  dst[1] = y;
+  dst[2] = z;
+}
+
 static unsigned char* _a_get_file(const char* file, uint32_t* size_ptr) {
   FILE* f = fopen(file, "rb+");
   if (!f) {
@@ -1056,7 +1062,7 @@ uint16_t a_sfx_play(a_ctx* ctx, uint16_t layer, uint16_t buf_id, a_req* req) {
   uint32_t size;
   alGetBufferi(buf->buf, AL_SIZE, (ALint*)&size);
 
-  alSourcef(slot->source, AL_GAIN, req->gain);
+  alSourcef(slot->source, AL_GAIN, gain);
   alSource3f(slot->source, AL_POSITION, req->position[0], req->position[1],
              req->position[2]);
   alSource3f(slot->source, AL_VELOCITY, req->velocity[0], req->velocity[1],
@@ -1174,7 +1180,7 @@ uint16_t a_song_create(a_ctx* ctx, unsigned char* data, uint32_t data_length,
 
   song->info = stb_vorbis_get_info(song->vorbis);
 
-  if (max_buffer_size < song->info.max_frame_size) {
+  if (max_buffer_size < (uint32_t)song->info.max_frame_size) {
     AUDIO_FUNC_DBG("max_buffer_size is smaller than the listed max "
                    "frame size of this OGG file: %i vs %i\n",
                    max_buffer_size, song->info.max_frame_size);
@@ -2291,7 +2297,7 @@ static int keyframe_compare(const void* a, const void* b) {
 
 a_timeline a_timeline_create(float* times, float* values,
                              a_keyframe_ease* eases, uint32_t count) {
-  a_timeline timeline = (a_timeline){.keyframe_count = count, 0};
+  a_timeline timeline = (a_timeline){.keyframe_count = count};
 
   timeline.keyframes = calloc(count, sizeof(a_keyframe));
   for (uint32_t i = 0; i < count; ++i) {
@@ -2321,10 +2327,6 @@ a_timeline_view a_timeline_create_view(a_timeline* timeline) {
   view.current_index = 0;
 
   return view;
-}
-
-static float f_clamp(float min, float max, float value) {
-  return (value > max) ? max : (value < min) ? min : value;
 }
 
 static float smooth_step(float t) { return t * t * (3.0f - 2.0f * t); }
@@ -2397,7 +2399,7 @@ void a_timeline_set_time(a_timeline_view* view, float time) {
   }
 
   view->time  = time;
-  view->value = a_timeline_calc_value_at(view, view->time);
+  view->value = a_timeline_calc_value_at(view->timeline, view->time);
 }
 
 void a_timeline_set_output(a_timeline_view* view, float* output) {

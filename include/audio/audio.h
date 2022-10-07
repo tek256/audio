@@ -16,11 +16,7 @@ typedef double time_s;
 typedef float a_vec2[2];
 typedef float a_vec3[3];
 
-static void a_vec3_set(a_vec3 dst, float x, float y, float z) {
-  dst[0] = x;
-  dst[1] = y;
-  dst[2] = z;
-}
+void a_vec3_set(a_vec3 dst, float x, float y, float z);
 
 /* NOTE: These are relative includes for portability's sake
  *       the cmake find_package exports them as relative so it'll work

@@ -86,7 +86,7 @@ int main(void) {
   a_ctx* ctx = a_ctx_create(ctx_info);
 
   uint16_t music_layer_id = a_layer_create(ctx, "music", 0, 1);
-  a_layer_set_gain(ctx, music_layer_id, 0.05f);
+  a_layer_set_gain(ctx, music_layer_id, 0.1f);
 
   // The position of the source in 3D Space (not important
   // for now)
@@ -109,7 +109,7 @@ int main(void) {
     times[i] = time_index;
 
     // Random float range: [0.2f, 0.8f]
-    values[i] = ((((float)rand() / RAND_MAX) * 0.8f) + 0.2f);
+    values[i] = ((((float)rand() / (float)RAND_MAX) * 0.8f) + 0.2f);
     eases[i]  = (rand() % 4);
     time_index += keyframe_time;
   }
@@ -128,8 +128,9 @@ int main(void) {
 
   time_index = 0.0f;
   for (int i = 0; i < keyframe_count * 4; ++i) {
-    time_index += (((float)rand() / RAND_MAX) * ((keyframe_time / 4) * 0.75f)) +
-                  ((keyframe_time / 4) * 0.25f);
+    time_index +=
+        (((float)rand() / (float)RAND_MAX) * ((keyframe_time / 4) * 0.75f)) +
+        ((keyframe_time / 4) * 0.25f);
     printf("Timeline value @ %.2f: %.2f\n", time_index,
            a_timeline_calc_value_at(&timeline, time_index));
   }

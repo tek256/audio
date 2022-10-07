@@ -11,6 +11,8 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_FIND_FRAMEWORK LAST)
 
+set(CMAKE_C_EXTENSIONS ON)
+
 include(CMakeDependentOption)
 include(GenerateExportHeader)
 include(FetchContent)
@@ -25,7 +27,7 @@ if (WIN32)
   set(ENV{OPENALDIR} "${openal-windows_SOURCE_DIR}")
 endif()
 
-find_package(OpenAL)
+find_package(OpenAL REQUIRED)
 
 if (OPENAL_FOUND AND NOT TARGET OpenAL::OpenAL)
   add_library(OpenAL::OpenAL UNKNOWN IMPORTED)
@@ -60,12 +62,6 @@ option(AUDIO_DEBUG_ENGINE OFF)
 # Disable OpenAL Audio Effects from being compiled in
 # NOTE: Mac OSX OpenAL Effects are currently disabled by default
 option(AUDIO_DISABLE_AUDIO_FX OFF)
-
-# TODO patch effects on Apple
-if(APPLE)
-  set(AUDIO_DISABLE_AUDIO_FX ON)
-endif()
-
 
 # Get all of our source files into a list
 file(GLOB sources CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/src/*.c)
@@ -124,9 +120,8 @@ target_link_libraries(${PROJECT_NAME}
     $<$<NOT:$<PLATFORM_ID:Windows>>:m>
     OpenAL::OpenAL)
 
-
-# set_property(TARGET ${PROJECT_NAME} PROPERTY C_VISIBILITY_PRESET "hidden")
-# set_property(TARGET ${PROJECT_NAME} PROPERTY VERSION ${PROJECT_VERSION})
+set_property(TARGET ${PROJECT_NAME} PROPERTY C_VISIBILITY_PRESET "hidden")
+set_property(TARGET ${PROJECT_NAME} PROPERTY VERSION ${PROJECT_VERSION})
 
 install(DIRECTORY include/ "${PROJECT_BINARY_DIR}/include/"
   TYPE INCLUDE
